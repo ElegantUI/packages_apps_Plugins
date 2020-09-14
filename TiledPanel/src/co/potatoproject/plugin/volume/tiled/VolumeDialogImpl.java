@@ -34,6 +34,9 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 import static co.potatoproject.plugin.volume.common.Events.DISMISS_REASON_SETTINGS_CLICKED;
 
+import android.database.ContentObserver;
+import android.os.UserHandle;
+
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
@@ -194,6 +197,34 @@ public class VolumeDialogImpl implements VolumeDialog {
     private boolean mActiveStreamManuallyModified = false;
 
     public VolumeDialogImpl() {}
+
+    private boolean isVoiceShowing = false;
+    private boolean isBTSCOShowing = false;
+
+    private class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_VOICE), false, this, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_BT_SCO), false, this, UserHandle.USER_ALL);
+            update();
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            update();
+        }
+
+        public void update() {
+             isVoiceShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_VOICE, 0, UserHandle.USER_CURRENT) == 1;
+             isBTSCOShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_BT_SCO, 0, UserHandle.USER_CURRENT) == 1;
+             updateRowsH(getActiveRow());
+        }
+    }
+
+    private SettingsObserver settingsObserver;
 
     @Override
     public void onCreate(Context sysuiContext, Context pluginContext) {
@@ -358,6 +389,9 @@ public class VolumeDialogImpl implements VolumeDialog {
         initOutputSwitcherH();
         initRingerH();
         initODICaptionsH();
+
+        settingsObserver = new SettingsObserver(mHandler);
+        settingsObserver.observe();
     }
     
     private final OnComputeInternalInsetsListener mInsetsListener = internalInsetsInfo -> {
@@ -440,6 +474,7 @@ public class VolumeDialogImpl implements VolumeDialog {
     }
 
     private void addExistingRows() {
+        Log.d(TAG, "addExistingRows ");
         int N = mRows.size();
         for (int i = 0; i < N; i++) {
             final VolumeRow row = mRows.get(i);
@@ -1028,6 +1063,13 @@ public class VolumeDialogImpl implements VolumeDialog {
     }
 
     private boolean shouldBeVisibleH(VolumeRow row, VolumeRow activeRow) {
+        if(row.stream == AudioManager.STREAM_VOICE_CALL && isVoiceShowing){
+            return true;
+        }
+        if(row.stream == AudioManager.STREAM_BLUETOOTH_SCO && isBTSCOShowing){
+            return true;
+        }
+
         boolean isActive = row.stream == activeRow.stream;
 
         if (isActive) {
