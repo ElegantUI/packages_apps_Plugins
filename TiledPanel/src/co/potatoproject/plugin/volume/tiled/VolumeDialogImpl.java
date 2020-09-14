@@ -192,7 +192,7 @@ public class VolumeDialogImpl implements VolumeDialog {
     private ViewStub mODICaptionsTooltipViewStub;
     private View mODICaptionsTooltipView = null;
 
-    private boolean mLeftVolumeRocker;
+    private boolean mLeftVolumeRocker = false;
     private Drawable mSwitchStreamSelectedDrawable;
     private boolean mActiveStreamManuallyModified = false;
 
@@ -209,6 +209,7 @@ public class VolumeDialogImpl implements VolumeDialog {
         void observe() {
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_VOICE), false, this, UserHandle.USER_ALL);
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_BT_SCO), false, this, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_POSITION), false, this, UserHandle.USER_ALL);
             update();
         }
 
@@ -220,7 +221,13 @@ public class VolumeDialogImpl implements VolumeDialog {
         public void update() {
              isVoiceShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_VOICE, 0, UserHandle.USER_CURRENT) == 1;
              isBTSCOShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_BT_SCO, 0, UserHandle.USER_CURRENT) == 1;
-             updateRowsH(getActiveRow());
+             boolean value = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_POSITION, 0, UserHandle.USER_CURRENT) == 0;
+             if(value != mLeftVolumeRocker){
+                mLeftVolumeRocker = value;
+                initDialog();
+             } else {
+                updateRowsH(getActiveRow());
+             }
         }
     }
 
@@ -311,7 +318,7 @@ public class VolumeDialogImpl implements VolumeDialog {
 
         if(mTopButtons != null) {
             LinearLayout.LayoutParams topButtonsLP = (LinearLayout.LayoutParams) mTopButtons.getLayoutParams();
-            if(!isAudioPanelOnLeftSide()) {
+            if(!mLeftVolumeRocker) {
                 topButtonsLP.gravity = Gravity.RIGHT;
             } else {
                 topButtonsLP.gravity = Gravity.LEFT;
@@ -450,7 +457,7 @@ public class VolumeDialogImpl implements VolumeDialog {
         if (D.BUG) Slog.d(TAG, "Adding row for stream " + stream);
         VolumeRow row = new VolumeRow();
         initRow(row, stream, iconRes, iconMuteRes, important, defaultStream);
-        if(!isAudioPanelOnLeftSide()){
+        if(!mLeftVolumeRocker){
             mDialogRowsView.addView(row.view, 0);
         } else {
             mDialogRowsView.addView(row.view);
@@ -483,7 +490,7 @@ public class VolumeDialogImpl implements VolumeDialog {
             initRow(row, row.stream, row.iconRes, row.iconMuteRes, row.important,
                     row.defaultStream);
             initStreamButton(button, row, button.stream, button.iconRes, button.iconMuteRes);
-            if(!isAudioPanelOnLeftSide()){
+            if(!mLeftVolumeRocker){
                 mDialogRowsView.addView(row.view, 0);
             } else {
                 mDialogRowsView.addView(row.view);

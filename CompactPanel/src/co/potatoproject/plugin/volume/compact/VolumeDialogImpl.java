@@ -189,7 +189,7 @@ public class VolumeDialogImpl implements VolumeDialog {
     private ViewStub mODICaptionsTooltipViewStub;
     private View mODICaptionsTooltipView = null;
 
-    private boolean mLeftVolumeRocker;
+    private boolean mLeftVolumeRocker = false;
     private PanelMode mPanelMode = PanelMode.MINI;
 
     public VolumeDialogImpl() {}
@@ -205,6 +205,7 @@ public class VolumeDialogImpl implements VolumeDialog {
         void observe() {
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_VOICE), false, this, UserHandle.USER_ALL);
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_BT_SCO), false, this, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_POSITION), false, this, UserHandle.USER_ALL);
             update();
         }
 
@@ -216,7 +217,13 @@ public class VolumeDialogImpl implements VolumeDialog {
         public void update() {
              isVoiceShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_VOICE, 0, UserHandle.USER_CURRENT) == 1;
              isBTSCOShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_BT_SCO, 0, UserHandle.USER_CURRENT) == 1;
-             updateRowsH(getActiveRow());
+             boolean value = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_POSITION, 0, UserHandle.USER_CURRENT) == 0;
+             if(value != mLeftVolumeRocker){
+                mLeftVolumeRocker = value;
+                initDialog();
+             } else {
+                updateRowsH(getActiveRow());
+             }
         }
     }
 
@@ -370,7 +377,7 @@ public class VolumeDialogImpl implements VolumeDialog {
                 (FrameLayout.LayoutParams) mExtraButtons.getLayoutParams();
 
         dialogViewLP.gravity = Gravity.CENTER_VERTICAL;
-        if (!isAudioPanelOnLeftSide()) {
+        if (!mLeftVolumeRocker) {
             mainFrameLP.gravity = Gravity.RIGHT | Gravity.CENTER_VERTICAL;
             buttonsGroupLP.gravity = Gravity.RIGHT | Gravity.CENTER_VERTICAL;
             mExpandRows.setRotation(90);
@@ -468,7 +475,7 @@ public class VolumeDialogImpl implements VolumeDialog {
             final VolumeRow row = mRows.get(i);
             initRow(row, row.stream, row.iconRes, row.iconMuteRes, row.important,
                     row.defaultStream);
-            if(!isAudioPanelOnLeftSide()){
+        if(!mLeftVolumeRocker){
                 mDialogRowsView.addView(row.view, 0);
             } else {
                 mDialogRowsView.addView(row.view);
@@ -1033,7 +1040,7 @@ public class VolumeDialogImpl implements VolumeDialog {
                     tryToRemoveCaptionsTooltip();
                 }, 50));
         if (!isLandscape() && mPanelMode != PanelMode.MINI)
-            animator.translationX((mDialogView.getWidth() / 2.0f)*(isAudioPanelOnLeftSide() ? -1 : 1));
+            animator.translationX((mDialogView.getWidth() / 2.0f)*(!mLeftVolumeRocker ? -1 : 1));
         animator.start();
         checkODICaptionsTooltip(true);
         mController.notifyVisible(false);
@@ -1711,10 +1718,6 @@ public class VolumeDialogImpl implements VolumeDialog {
             rescheduleTimeoutH();
             return super.onRequestSendAccessibilityEvent(host, child, event);
         }
-    }
-
-    private boolean isAudioPanelOnLeftSide() {
-        return mLeftVolumeRocker;
     }
 
     private static class VolumeRow {
