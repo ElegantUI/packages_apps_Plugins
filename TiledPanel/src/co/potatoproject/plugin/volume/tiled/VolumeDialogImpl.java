@@ -201,6 +201,8 @@ public class VolumeDialogImpl implements VolumeDialog {
     private boolean isVoiceShowing = false;
     private boolean isBTSCOShowing = false;
 
+    private int mAnimation;
+
     private class SettingsObserver extends ContentObserver {
         SettingsObserver(Handler handler) {
             super(handler);
@@ -210,6 +212,7 @@ public class VolumeDialogImpl implements VolumeDialog {
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_VOICE), false, this, UserHandle.USER_ALL);
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_BT_SCO), false, this, UserHandle.USER_ALL);
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.AUDIO_PANEL_VIEW_POSITION), false, this, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.VOLUME_PANEL_ANIMATION), false, this, UserHandle.USER_ALL);
             update();
         }
 
@@ -221,6 +224,7 @@ public class VolumeDialogImpl implements VolumeDialog {
         public void update() {
              isVoiceShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_VOICE, 0, UserHandle.USER_CURRENT) == 1;
              isBTSCOShowing = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_BT_SCO, 0, UserHandle.USER_CURRENT) == 1;
+             mAnimation = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.VOLUME_PANEL_ANIMATION, 11, UserHandle.USER_CURRENT);
              boolean value = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.AUDIO_PANEL_VIEW_POSITION, 0, UserHandle.USER_CURRENT) == 0;
              if(value != mLeftVolumeRocker){
                 mLeftVolumeRocker = value;
@@ -400,7 +404,48 @@ public class VolumeDialogImpl implements VolumeDialog {
         settingsObserver = new SettingsObserver(mHandler);
         settingsObserver.observe();
     }
-    
+
+    private void updateAnimations() {
+        switch (mAnimation) {
+           case 0:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationEnter;
+           break;
+           case 1:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimation;
+           break;
+           case 2:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationTop;
+           break;
+           case 3:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationFly;
+           break;
+           case 4:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationTn;
+           break;
+           case 5:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationTranslucent;
+           break;
+           case 6:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationXylon;
+           break;
+           case 7:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationCard;
+           break;
+           case 8:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationTranslucent;
+           break;
+           case 9:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationTranslucent;
+           break;
+           case 10:
+              mWindowParams.windowAnimations = com.android.internal.R.style.GlobalActionsAnimationRotate;
+           default:
+           case 11:
+            mWindowParams.windowAnimations = -1;
+           break;
+        }
+    }
+
     private final OnComputeInternalInsetsListener mInsetsListener = internalInsetsInfo -> {
         internalInsetsInfo.touchableRegion.setEmpty();
         internalInsetsInfo.setTouchableInsets(InternalInsetsInfo.TOUCHABLE_INSETS_REGION);
